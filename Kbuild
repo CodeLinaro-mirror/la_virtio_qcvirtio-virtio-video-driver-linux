@@ -15,6 +15,10 @@ GIT_VERSION = $(shell git -C "$(MODULE_GIT_REPOSITORY_DIR)" describe --tags --di
 ccflags-y := -I"$(src)/include/uapi"
 ccflags-y += -DDRIVER_VERSION=\"$(GIT_VERSION)\"
 
+# In case of external kernel module build within Android's kernel/build system
+# the previous line doesn't work. Hence, specify headers location in other way
+ccflags-y += -I$(VIRTIO_VIDEO_ROOT)/include/uapi
+
 # During development, to turn-off treating warning as error, pass
 # `CFLAGS_MODULE=-Wno-error` to make as an argument or environment variable.
 ccflags-y += -Werror
