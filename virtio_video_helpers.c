@@ -58,25 +58,25 @@ uint32_t virtio_video_v4l2_level_to_virtio(uint32_t v4l2_level)
 
 static struct virtio_video_convert_table profile_table[] = {
 	{ VIRTIO_VIDEO_PROFILE_H264_BASELINE,
-		V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE },
+	  V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE },
 	{ VIRTIO_VIDEO_PROFILE_H264_MAIN, V4L2_MPEG_VIDEO_H264_PROFILE_MAIN },
 	{ VIRTIO_VIDEO_PROFILE_H264_EXTENDED,
-		V4L2_MPEG_VIDEO_H264_PROFILE_EXTENDED },
+	  V4L2_MPEG_VIDEO_H264_PROFILE_EXTENDED },
 	{ VIRTIO_VIDEO_PROFILE_H264_HIGH, V4L2_MPEG_VIDEO_H264_PROFILE_HIGH },
 	{ VIRTIO_VIDEO_PROFILE_H264_HIGH10PROFILE,
-		V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_10 },
+	  V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_10 },
 	{ VIRTIO_VIDEO_PROFILE_H264_HIGH422PROFILE,
-		V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_422},
+	  V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_422 },
 	{ VIRTIO_VIDEO_PROFILE_H264_HIGH444PREDICTIVEPROFILE,
-		V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_444_PREDICTIVE },
+	  V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_444_PREDICTIVE },
 	{ VIRTIO_VIDEO_PROFILE_H264_SCALABLEBASELINE,
-		V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_BASELINE },
+	  V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_BASELINE },
 	{ VIRTIO_VIDEO_PROFILE_H264_SCALABLEHIGH,
-		V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_HIGH },
+	  V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_HIGH },
 	{ VIRTIO_VIDEO_PROFILE_H264_STEREOHIGH,
-		V4L2_MPEG_VIDEO_H264_PROFILE_STEREO_HIGH },
+	  V4L2_MPEG_VIDEO_H264_PROFILE_STEREO_HIGH },
 	{ VIRTIO_VIDEO_PROFILE_H264_MULTIVIEWHIGH,
-		V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH },
+	  V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH },
 	{ 0 },
 };
 
@@ -157,7 +157,11 @@ static struct virtio_video_convert_table control_table[] = {
 	{ VIRTIO_VIDEO_CONTROL_PROFILE, V4L2_CID_MPEG_VIDEO_H264_PROFILE },
 	{ VIRTIO_VIDEO_CONTROL_LEVEL, V4L2_CID_MPEG_VIDEO_H264_LEVEL },
 	{ VIRTIO_VIDEO_CONTROL_FORCE_KEYFRAME,
-			V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME },
+	  V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME },
+	{ VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY_ENABLE,
+	  V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY_ENABLE },
+	{ VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY,
+	  V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY },
 	{ 0 },
 };
 
@@ -181,24 +185,6 @@ uint32_t virtio_video_v4l2_control_to_virtio(uint32_t v4l2_control)
 		if (control_table[idx].v4l2_value == v4l2_control)
 			return control_table[idx].virtio_value;
 	}
-
-	return 0;
-}
-
-uint32_t virtio_video_get_format_from_virtio_profile(uint32_t virtio_profile)
-{
-	if (virtio_profile >= VIRTIO_VIDEO_PROFILE_H264_MIN &&
-	    virtio_profile <= VIRTIO_VIDEO_PROFILE_H264_MAX)
-		return VIRTIO_VIDEO_FORMAT_H264;
-	else if (virtio_profile >= VIRTIO_VIDEO_PROFILE_HEVC_MIN &&
-		 virtio_profile <= VIRTIO_VIDEO_PROFILE_HEVC_MAX)
-		return VIRTIO_VIDEO_FORMAT_HEVC;
-	else if (virtio_profile >= VIRTIO_VIDEO_PROFILE_VP8_MIN &&
-		 virtio_profile <= VIRTIO_VIDEO_PROFILE_VP8_MAX)
-		return VIRTIO_VIDEO_FORMAT_VP8;
-	else if (virtio_profile >= VIRTIO_VIDEO_PROFILE_VP9_MIN &&
-		 virtio_profile <= VIRTIO_VIDEO_PROFILE_VP9_MAX)
-		return VIRTIO_VIDEO_FORMAT_VP9;
 
 	return 0;
 }
@@ -237,14 +223,14 @@ void virtio_video_format_from_info(struct video_format_info *info,
 
 	for (i = 0; i < info->num_planes; i++) {
 		pix_mp->plane_fmt[i].bytesperline =
-					 info->plane_format[i].stride;
+			info->plane_format[i].stride;
 		pix_mp->plane_fmt[i].sizeimage =
-					 info->plane_format[i].plane_size;
+			info->plane_format[i].plane_size;
 	}
 }
 
 void virtio_video_format_fill_default_info(struct video_format_info *dst_info,
-					  struct video_format_info *src_info)
+					   struct video_format_info *src_info)
 {
 	memcpy(dst_info, src_info, sizeof(*dst_info));
 }

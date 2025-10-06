@@ -1,11 +1,11 @@
 #
-# Makefile for mod coqos
+# Makefile for virtio_video kernel module.
 #
 KDIR ?= $(KERNEL_SRC)
 ifeq ($(KDIR),)
 $(error "KDIR must be specified.")
 endif
-
+KBUILD_OPTIONS ?= MODNAME=virtio_video
 # The variable "M" is used to point to the location of this module, and it is
 # passed to kbuild to build this module.
 #
@@ -17,17 +17,17 @@ endif
 # empowers the build system to put output/object files (.o, .ko.) into a
 # directory different from the module source directory.
 M ?= $$PWD
-
 # Some build systems may rsync module sources out of git repository to have
 # sources directory untouched during build. Then, they should specify Git
-# repository directory in MODULE_GIT_REPOSITORY_DIR variable for 'git describe'
-# to work properly.
-
+# repository directory separately for 'git describe' to work properly.
+MODULE_GIT_REPOSITORY_DIR ?= $(M)
 default:
-	$(MAKE) -C $(KDIR) M=$(M)
-
+	$(MAKE) -C $(KDIR) M=$(M) modules $(KBUILD_OPTIONS) MODULE_GIT_REPOSITORY_DIR=$(MODULE_GIT_REPOSITORY_DIR)
 modules_install:
 	$(MAKE) -C $(KDIR) M=$(M) $@
-
+%:
+	$(MAKE) -C $(KDIR) M=$(M) $@ $(KBUILD_OPTIONS) MODULE_GIT_REPOSITORY_DIR=$(MODULE_GIT_REPOSITORY_DIR)
 clean:
 	$(MAKE) -C $(KDIR) M=$(M) $@
+	rm -f *.o *.ko *.mod.c *.mod.o *~ .*.cmd Module.symvers
+	rm -rf .tmp_versions

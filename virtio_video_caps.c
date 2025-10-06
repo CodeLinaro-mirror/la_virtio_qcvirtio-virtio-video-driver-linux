@@ -81,13 +81,16 @@ static size_t virtio_video_parse_virtio_frame(struct virtio_video_device *vvd,
 	frm->frame_rates = kcalloc(frame->num_rates,
 				   sizeof(struct virtio_video_format_range),
 				   GFP_KERNEL);
+	if (!frm->frame_rates) {
+		v4l2_err(&vvd->v4l2_dev, "failed to allocate frame_rates\n");
+		return 0;
+	}
 
 	offset = sizeof(struct virtio_video_format_frame);
 	for (idx = 0; idx < frame->num_rates; idx++) {
 		rate = &frm->frame_rates[idx];
-		extra_size =
-			virtio_video_parse_virtio_frame_rate(vvd, rate,
-							     buf + offset);
+		extra_size = virtio_video_parse_virtio_frame_rate(vvd, rate,
+								  buf + offset);
 		if (extra_size == 0) {
 			kfree(frm->frame_rates);
 			v4l2_err(&vvd->v4l2_dev,
@@ -111,23 +114,24 @@ static size_t virtio_video_parse_virtio_fmt(struct virtio_video_device *vvd,
 	virtio_fmt_desc = buf;
 	fmt_desc = &fmt->desc;
 
-	fmt_desc->format =
-		virtio_video_format_to_v4l2
-		(le32_to_cpu(virtio_fmt_desc->format));
+	fmt_desc->format = virtio_video_format_to_v4l2(
+		le32_to_cpu(virtio_fmt_desc->format));
 	fmt_desc->mask = le64_to_cpu(virtio_fmt_desc->mask);
 	fmt_desc->planes_layout = le32_to_cpu(virtio_fmt_desc->planes_layout);
 
 	fmt_desc->num_frames = le32_to_cpu(virtio_fmt_desc->num_frames);
 	fmt->frames = kcalloc(fmt_desc->num_frames,
-			      sizeof(struct video_format_frame),
-			      GFP_KERNEL);
+			      sizeof(struct video_format_frame), GFP_KERNEL);
+	if (!fmt->frames) {
+		v4l2_err(&vvd->v4l2_dev, "failed to allocate frames\n");
+		return 0;
+	}
 
 	offset = sizeof(struct virtio_video_format_desc);
 	for (idx = 0; idx < fmt_desc->num_frames; idx++) {
 		frame = &fmt->frames[idx];
-		extra_size =
-			virtio_video_parse_virtio_frame(vvd, frame,
-							buf + offset);
+		extra_size = virtio_video_parse_virtio_frame(vvd, frame,
+							     buf + offset);
 		if (extra_size == 0) {
 			kfree(fmt->frames);
 			v4l2_err(&vvd->v4l2_dev, "failed to parse frame\n");
@@ -139,10 +143,10 @@ static size_t virtio_video_parse_virtio_fmt(struct virtio_video_device *vvd,
 	return offset;
 }
 
-int virtio_video_parse_virtio_capability(struct virtio_video_device *vvd,
-					 void *resp_buf,
-					 struct list_head *ret_fmt_list,
-					 uint32_t *ret_num_fmts)
+static int virtio_video_parse_virtio_capability(struct virtio_video_device *vvd,
+						void *resp_buf,
+						struct list_head *ret_fmt_list,
+						uint32_t *ret_num_fmts)
 {
 	struct virtio_video_query_capability_resp *resp = resp_buf;
 	struct video_format *fmt;
@@ -200,21 +204,20 @@ int virtio_video_parse_virtio_capabilities(struct virtio_video_device *vvd,
 	int ret;
 
 	if (input_buf) {
-		ret = virtio_video_parse_virtio_capability(vvd, input_buf,
-						&vvd->input_fmt_list,
-						&vvd->num_input_fmts);
+		ret = virtio_video_parse_virtio_capability(
+			vvd, input_buf, &vvd->input_fmt_list,
+			&vvd->num_input_fmts);
 		if (ret) {
 			v4l2_err(&vvd->v4l2_dev,
-				 "Failed to parse input capability: %d\n",
-				 ret);
+				 "Failed to parse input capability: %d\n", ret);
 			return ret;
 		}
 	}
 
 	if (output_buf) {
-		ret = virtio_video_parse_virtio_capability(vvd, output_buf,
-						 &vvd->output_fmt_list,
-						 &vvd->num_output_fmts);
+		ret = virtio_video_parse_virtio_capability(
+			vvd, output_buf, &vvd->output_fmt_list,
+			&vvd->num_output_fmts);
 		if (ret) {
 			v4l2_err(&vvd->v4l2_dev,
 				 "Failed to parse output capability: %d\n",
@@ -269,8 +272,8 @@ static int virtio_video_parse_control_levels(struct virtio_video_device *vvd,
 	virtio_format = virtio_video_v4l2_format_to_virtio(fmt->format);
 
 	resp_buf = kzalloc(resp_size, GFP_KERNEL);
-	if (IS_ERR(resp_buf)) {
-		ret = PTR_ERR(resp_buf);
+	if (!resp_buf) {
+		ret = -ENOMEM;
 		goto lvl_err;
 	}
 
@@ -303,9 +306,8 @@ static int virtio_video_parse_control_levels(struct virtio_video_device *vvd,
 	virtio_levels = (void *)((char *)l_resp_buf + sizeof(*l_resp_buf));
 
 	for (idx = 0; idx < num_levels; idx++) {
-		level->entries[idx] =
-			virtio_video_level_to_v4l2
-			(le32_to_cpu(virtio_levels[idx]));
+		level->entries[idx] = virtio_video_level_to_v4l2(
+			le32_to_cpu(virtio_levels[idx]));
 
 		mask = mask | (1 << level->entries[idx]);
 		if (level->entries[idx] > max)
@@ -339,8 +341,8 @@ static int virtio_video_parse_control_profiles(struct virtio_video_device *vvd,
 	resp_size = vvd->max_resp_len;
 	virtio_format = virtio_video_v4l2_format_to_virtio(fmt->format);
 	resp_buf = kzalloc(resp_size, GFP_KERNEL);
-	if (IS_ERR(resp_buf)) {
-		ret = PTR_ERR(resp_buf);
+	if (!resp_buf) {
+		ret = -ENOMEM;
 		goto prf_err;
 	}
 
@@ -373,9 +375,8 @@ static int virtio_video_parse_control_profiles(struct virtio_video_device *vvd,
 	virtio_profiles = (void *)((char *)p_resp_buf + sizeof(*p_resp_buf));
 
 	for (idx = 0; idx < num_profiles; idx++) {
-		profile->entries[idx] =
-			virtio_video_profile_to_v4l2
-			(le32_to_cpu(virtio_profiles[idx]));
+		profile->entries[idx] = virtio_video_profile_to_v4l2(
+			le32_to_cpu(virtio_profiles[idx]));
 
 		mask = mask | (1 << profile->entries[idx]);
 		if (profile->entries[idx] > max)

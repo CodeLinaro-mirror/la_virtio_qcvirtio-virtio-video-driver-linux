@@ -40,11 +40,9 @@ static int virtio_video_probe(struct virtio_device *vdev)
 	struct device *dev = &vdev->dev;
 	struct device *pdev = dev->parent;
 
-	static const char * const names[] = { "commandq", "eventq" };
-	static vq_callback_t *callbacks[] = {
-		virtio_video_cmd_cb,
-		virtio_video_event_cb
-	};
+	static const char *const names[] = { "commandq", "eventq" };
+	static vq_callback_t *callbacks[] = { virtio_video_cmd_cb,
+					      virtio_video_event_cb };
 
 	if (!virtio_has_feature(vdev, VIRTIO_VIDEO_F_RESOURCE_GUEST_PAGES)) {
 		dev_err(dev, "device must support guest allocated buffers\n");
@@ -81,7 +79,7 @@ static int virtio_video_probe(struct virtio_device *vdev)
 	if (virtio_has_feature(vdev, VIRTIO_VIDEO_F_RESOURCE_NON_CONTIG))
 		vvd->supp_non_contig = true;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
 	vvd->has_iommu = !virtio_has_dma_quirk(vdev);
 #else
 	vvd->has_iommu = !virtio_has_iommu_quirk(vdev);
@@ -140,8 +138,7 @@ static int virtio_video_probe(struct virtio_device *vdev)
 
 	ret = virtio_video_device_init(vvd);
 	if (ret) {
-		v4l2_err(&vvd->v4l2_dev,
-			 "failed to init virtio video\n");
+		v4l2_err(&vvd->v4l2_dev, "failed to init virtio video\n");
 		goto err_init;
 	}
 

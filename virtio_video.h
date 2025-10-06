@@ -9,10 +9,10 @@
 #ifndef _VIRTIO_VIDEO_H
 #define _VIRTIO_VIDEO_H
 
+#include "include/uapi/linux/virtio_video.h"
 #include <linux/virtio.h>
 #include <linux/virtio_ids.h>
 #include <linux/virtio_config.h>
-#include <linux/virtio_video.h>
 #include <linux/list.h>
 #include <linux/completion.h>
 #include <media/v4l2-device.h>
@@ -30,6 +30,9 @@
 #define MIN_BUFS_MAX VIDEO_MAX_FRAME
 #define MIN_BUFS_STEP 1
 #define MIN_BUFS_DEF 1
+
+static_assert(VIRTIO_VIDEO_MAX_PLANES == VB2_MAX_PLANES,
+	      "Max planes number in virtio-video must match V4L2/videobuf2");
 
 struct video_format_frame {
 	struct virtio_video_format_frame frame;
@@ -79,32 +82,8 @@ struct video_control_info {
 	uint32_t profile;
 	uint32_t level;
 	uint32_t bitrate;
-};
-
-struct virtio_video_device;
-struct virtio_video_vbuffer;
-
-typedef void (*virtio_video_resp_cb)(struct virtio_video_device *vvd,
-				     struct virtio_video_vbuffer *vbuf);
-
-struct virtio_video_vbuffer {
-	char *buf;
-	int size;
-	uint32_t id;
-
-	void *data_buf;
-	uint32_t data_size;
-
-	char *resp_buf;
-	int resp_size;
-
-	void *priv;
-	virtio_video_resp_cb resp_cb;
-
-	bool is_sync;
-	struct completion reclaimed;
-
-	struct list_head pending_list_entry;
+	uint32_t display_delay;
+	uint32_t display_delay_enable;
 };
 
 struct virtio_video_cmd_queue {
@@ -195,7 +174,7 @@ struct virtio_video_device_ops {
 	int (*init_ctrls)(struct virtio_video_stream *stream);
 	int (*init_queues)(void *priv, struct vb2_queue *src_vq,
 			   struct vb2_queue *dst_vq);
-	void* (*get_fmt_list)(struct virtio_video_device *vvd);
+	void *(*get_fmt_list)(struct virtio_video_device *vvd);
 };
 
 struct virtio_video_buffer {
@@ -204,8 +183,7 @@ struct virtio_video_buffer {
 	bool queued;
 };
 
-static inline gfp_t
-virtio_video_gfp_flags(struct virtio_video_device *vvd)
+static inline gfp_t virtio_video_gfp_flags(struct virtio_video_device *vvd)
 {
 	if (vvd->use_dma_mem)
 		return GFP_DMA;
@@ -225,8 +203,7 @@ virtio_video_mem_ops(struct virtio_video_device *vvd)
 static inline struct virtio_video_device *
 to_virtio_vd(struct video_device *video_dev)
 {
-	return container_of(video_dev, struct virtio_video_device,
-			 video_dev);
+	return container_of(video_dev, struct virtio_video_device, video_dev);
 }
 
 static inline struct virtio_video_stream *file2stream(struct file *file)
@@ -306,14 +283,14 @@ int virtio_video_cmd_resource_attach(struct virtio_video_device *vvd,
 				     uint32_t stream_id, uint32_t resource_id,
 				     enum virtio_video_queue_type queue_type,
 				     void *buf, size_t buf_size);
-int virtio_video_cmd_resource_queue(struct virtio_video_device *vvd,
-				    uint32_t stream_id,
-				    struct virtio_video_buffer *virtio_vb,
-				    uint32_t data_size[], uint8_t num_data_size,
-				    enum virtio_video_queue_type queue_type);
-int virtio_video_cmd_queue_detach_resources(struct virtio_video_device *vvd,
-				struct virtio_video_stream *stream,
-				enum virtio_video_queue_type queue_type);
+int virtio_video_cmd_resource_queue(
+	struct virtio_video_device *vvd, uint32_t stream_id,
+	struct virtio_video_buffer *virtio_vb,
+	uint32_t data_sizes[VIRTIO_VIDEO_MAX_PLANES], size_t num_data_sizes,
+	enum virtio_video_queue_type queue_type);
+int virtio_video_cmd_queue_detach_resources(
+	struct virtio_video_device *vvd, struct virtio_video_stream *stream,
+	enum virtio_video_queue_type queue_type);
 int virtio_video_cmd_queue_clear(struct virtio_video_device *vvd,
 				 struct virtio_video_stream *stream,
 				 enum virtio_video_queue_type queue_type);
@@ -354,7 +331,7 @@ void virtio_video_process_events(struct work_struct *work);
 void virtio_video_buf_done(struct virtio_video_buffer *virtio_vb,
 			   uint32_t flags, uint64_t timestamp,
 			   uint32_t data_sizes[]);
-int virtio_video_buf_plane_init(uint32_t idx,uint32_t resource_id,
+int virtio_video_buf_plane_init(uint32_t idx, uint32_t resource_id,
 				struct virtio_video_device *vvd,
 				struct virtio_video_stream *stream,
 				struct vb2_buffer *vb);
@@ -364,10 +341,8 @@ int virtio_video_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 int virtio_video_buf_init(struct vb2_buffer *vb);
 void virtio_video_buf_cleanup(struct vb2_buffer *vb);
 void virtio_video_buf_queue(struct vb2_buffer *vb);
-int virtio_video_qbuf(struct file *file, void *priv,
-		      struct v4l2_buffer *buf);
-int virtio_video_dqbuf(struct file *file, void *priv,
-		       struct v4l2_buffer *buf);
+int virtio_video_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf);
+int virtio_video_dqbuf(struct file *file, void *priv, struct v4l2_buffer *buf);
 int virtio_video_querycap(struct file *file, void *fh,
 			  struct v4l2_capability *cap);
 int virtio_video_g_fmt(struct file *file, void *fh, struct v4l2_format *f);
@@ -375,7 +350,7 @@ int virtio_video_s_fmt(struct file *file, void *fh, struct v4l2_format *f);
 int virtio_video_try_fmt(struct virtio_video_stream *stream,
 			 struct v4l2_format *f);
 int virtio_video_reqbufs(struct file *file, void *priv,
-                        struct v4l2_requestbuffers *rb);
+			 struct v4l2_requestbuffers *rb);
 int virtio_video_subscribe_event(struct v4l2_fh *fh,
 				 const struct v4l2_event_subscription *sub);
 
@@ -406,7 +381,7 @@ virtio_video_find_compatible_input_format(struct virtio_video_stream *stream,
 void virtio_video_format_from_info(struct video_format_info *info,
 				   struct v4l2_pix_format_mplane *pix_mp);
 void virtio_video_format_fill_default_info(struct video_format_info *dst_info,
-                                          struct video_format_info *src_info);
+					   struct video_format_info *src_info);
 int virtio_video_frmsizeenum_from_fmt(struct video_format *fmt,
 				      struct v4l2_frmsizeenum *f);
 int virtio_video_frmivalenum_from_fmt(struct video_format *fmt,

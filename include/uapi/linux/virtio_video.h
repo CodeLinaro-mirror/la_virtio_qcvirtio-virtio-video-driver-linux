@@ -60,7 +60,6 @@ enum {
 	VIRTIO_VIDEO_F_VENDOR = 2
 };
 
-
 #define VIRTIO_VIDEO_MAX_PLANES 8
 
 /*
@@ -278,7 +277,7 @@ struct virtio_video_stream_drain {
 
 /* VIRTIO_VIDEO_CMD_RESOURCE_ATTACH */
 struct virtio_video_resource_object {
-	__u8 uuid [16];
+	__u8 uuid[16];
 };
 
 struct virtio_video_resource_sg_entry {
@@ -314,7 +313,7 @@ struct virtio_video_resource_queue {
 	__le32 stream_id;
 	__le32 queue_type; /* VIRTIO_VIDEO_QUEUE_TYPE_* */
 	__le32 resource_id;
-	__le32 flags;      /* Bitmask with VIRTIO_VIDEO_ENQUEUE_FLAG_ * */
+	__le32 flags; /* Bitmask with VIRTIO_VIDEO_ENQUEUE_FLAG_ * */
 	__u8 padding[4];
 	__le64 timestamp;
 	__le32 data_sizes[VIRTIO_VIDEO_MAX_PLANES];
@@ -409,6 +408,8 @@ enum virtio_video_control_type {
 	VIRTIO_VIDEO_CONTROL_PROFILE,
 	VIRTIO_VIDEO_CONTROL_LEVEL,
 	VIRTIO_VIDEO_CONTROL_FORCE_KEYFRAME,
+	VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY_ENABLE,
+	VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY,
 };
 
 struct virtio_video_query_control_profile {
@@ -467,6 +468,16 @@ struct virtio_video_control_val_profile {
 
 struct virtio_video_control_val_level {
 	__le32 level;
+	__u8 padding[4];
+};
+
+struct virtio_video_control_val_dec_display_delay_enable {
+	__le32 delay_enable;
+	__u8 padding[4];
+};
+
+struct virtio_video_control_val_dec_display_delay {
+	__le32 delay;
 	__u8 padding[4];
 };
 
