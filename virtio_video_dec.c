@@ -328,6 +328,8 @@ static int virtio_video_dec_enum_fmt_vid_out(struct file *file, void *fh,
 	list_for_each_entry(fmt, &vvd->input_fmt_list, formats_list_entry) {
 		if (f->index == idx) {
 			f->pixelformat = fmt->desc.format;
+			/* Hardcode dynamic resolution change flag for coded formats */
+			f->flags = V4L2_FMT_FLAG_DYN_RESOLUTION;
 			return 0;
 		}
 		idx++;
