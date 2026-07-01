@@ -116,7 +116,7 @@ int virtio_video_buf_init(struct vb2_buffer *vb)
 			buf_size += VIRTIO_VIDEO_RESOURCE_SG_SIZE(nents);
 		}
 
-		buf = kcalloc(1, buf_size, GFP_KERNEL);
+		buf = kzalloc(buf_size, GFP_KERNEL);
 		if (!buf)
 			return -ENOMEM;
 
@@ -128,7 +128,7 @@ int virtio_video_buf_init(struct vb2_buffer *vb)
 	} else {
 		buf_size = vb->num_planes * VIRTIO_VIDEO_RESOURCE_SG_SIZE(1);
 
-		buf = kcalloc(1, buf_size, GFP_KERNEL);
+		buf = kzalloc(buf_size, GFP_KERNEL);
 		if (!buf)
 			return -ENOMEM;
 
@@ -168,26 +168,14 @@ void virtio_video_buf_cleanup(struct vb2_buffer *vb)
 
 void virtio_video_buf_queue(struct vb2_buffer *vb)
 {
-	int i, ret;
 	struct virtio_video_buffer *virtio_vb;
-	uint32_t data_sizes[VIRTIO_VIDEO_MAX_PLANES] = { 0 };
 	struct virtio_video_stream *stream = vb2_get_drv_priv(vb->vb2_queue);
 	struct virtio_video_device *vvd = to_virtio_vd(stream->video_dev);
 
-	for (i = 0; i < vb->num_planes; ++i)
-		data_sizes[i] = vb->planes[i].bytesused;
-
 	virtio_vb = to_virtio_vb(vb);
-
-	ret = virtio_video_cmd_resource_queue(vvd, stream->stream_id, virtio_vb,
-					      data_sizes, vb->num_planes,
-					      to_virtio_queue_type(vb->type));
-	if (ret) {
-		v4l2_err(&vvd->v4l2_dev, "failed to queue buffer\n");
-		return;
-	}
-
 	virtio_vb->queued = true;
+
+	virtio_video_cmd_resource_queue(vvd, stream->stream_id, virtio_vb);
 }
 
 int virtio_video_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
@@ -233,15 +221,15 @@ int virtio_video_stream_get_params(struct virtio_video_device *vvd,
 {
 	int ret;
 
-	ret = virtio_video_cmd_get_params(vvd, stream,
-					  VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
+	ret = virtio_video_cmd_stream_get_params(vvd, stream,
+						 VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to get stream in params\n");
 		goto err_get_parms;
 	}
 
-	ret = virtio_video_cmd_get_params(vvd, stream,
-					  VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT);
+	ret = virtio_video_cmd_stream_get_params(
+		vvd, stream, VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT);
 	if (ret)
 		v4l2_err(&vvd->v4l2_dev, "failed to get stream out params\n");
 
@@ -249,38 +237,38 @@ err_get_parms:
 	return ret;
 }
 
-int virtio_video_stream_get_controls(struct virtio_video_device *vvd,
-				     struct virtio_video_stream *stream)
+static int virtio_video_stream_get_controls(struct virtio_video_device *vvd,
+					    struct virtio_video_stream *stream)
 {
 	int ret;
 
 	ret = virtio_video_cmd_get_control(vvd, stream,
-					   VIRTIO_VIDEO_CONTROL_PROFILE);
+					   V4L2_CID_MPEG_VIDEO_H264_PROFILE);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to get stream profile\n");
 		goto err_get_ctrl;
 	}
 
 	ret = virtio_video_cmd_get_control(vvd, stream,
-					   VIRTIO_VIDEO_CONTROL_LEVEL);
+					   V4L2_CID_MPEG_VIDEO_H264_LEVEL);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to get stream level\n");
 		goto err_get_ctrl;
 	}
 
 	ret = virtio_video_cmd_get_control(vvd, stream,
-					   VIRTIO_VIDEO_CONTROL_BITRATE);
+					   V4L2_CID_MPEG_VIDEO_BITRATE);
 	if (ret)
 		v4l2_err(&vvd->v4l2_dev, "failed to get stream bitrate\n");
 
 	ret = virtio_video_cmd_get_control(
-		vvd, stream, VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY_ENABLE);
+		vvd, stream, V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY_ENABLE);
 	if (ret)
 		v4l2_err(&vvd->v4l2_dev,
 			 "failed to get decoder display delay enable\n");
 
 	ret = virtio_video_cmd_get_control(
-		vvd, stream, VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY);
+		vvd, stream, V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY);
 	if (ret)
 		v4l2_err(&vvd->v4l2_dev,
 			 "failed to get decoder display delay\n");
@@ -342,7 +330,7 @@ int virtio_video_s_fmt(struct file *file, void *fh, struct v4l2_format *f)
 			pix_mp->plane_fmt[i].sizeimage;
 	}
 
-	virtio_video_cmd_set_params(vvd, stream, &info, queue);
+	virtio_video_cmd_stream_set_params(vvd, stream, &info, queue);
 	virtio_video_stream_get_params(vvd, stream);
 
 	if (V4L2_TYPE_IS_OUTPUT(f->type))
@@ -489,7 +477,7 @@ static int virtio_video_queue_free(struct virtio_video_device *vvd,
 				   enum v4l2_buf_type type)
 {
 	int ret;
-	enum virtio_video_queue_type queue_type = to_virtio_queue_type(type);
+	uint32_t queue_type = to_virtio_queue_type(type);
 
 	ret = virtio_video_cmd_queue_detach_resources(vvd, stream, queue_type);
 	if (ret) {
@@ -555,13 +543,13 @@ void virtio_video_handle_error(struct virtio_video_stream *stream)
 }
 
 int virtio_video_queue_release_buffers(struct virtio_video_stream *stream,
-				       enum virtio_video_queue_type queue_type)
+				       uint32_t queue_type)
 {
 	int ret;
 	struct virtio_video_device *vvd = to_virtio_vd(stream->video_dev);
 	struct vb2_v4l2_buffer *v4l2_vb;
 
-	ret = virtio_video_cmd_queue_clear(vvd, stream, queue_type);
+	ret = virtio_video_cmd_queue_reset(vvd, stream, queue_type);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to clear queue\n");
 		return ret;
@@ -582,7 +570,7 @@ int virtio_video_queue_release_buffers(struct virtio_video_stream *stream,
 
 void virtio_video_buf_done(struct virtio_video_buffer *virtio_vb,
 			   uint32_t flags, uint64_t timestamp,
-			   uint32_t data_sizes[])
+			   __le32 data_sizes[VIRTIO_VIDEO_MAX_PLANES])
 {
 	int i;
 	enum vb2_buffer_state done_state = VB2_BUF_STATE_DONE;
@@ -595,26 +583,26 @@ void virtio_video_buf_done(struct virtio_video_buffer *virtio_vb,
 
 	virtio_vb->queued = false;
 
-	if (flags & VIRTIO_VIDEO_DEQUEUE_FLAG_ERR)
+	if (flags & VIRTIO_VIDEO_QUEUE_FLAG_ERR)
 		done_state = VB2_BUF_STATE_ERROR;
 
-	if (flags & VIRTIO_VIDEO_DEQUEUE_FLAG_KEY_FRAME)
+	if (flags & VIRTIO_VIDEO_QUEUE_FLAG_KEY_FRAME)
 		v4l2_vb->flags |= V4L2_BUF_FLAG_KEYFRAME;
 
-	if (flags & VIRTIO_VIDEO_DEQUEUE_FLAG_BFRAME)
+	if (flags & VIRTIO_VIDEO_QUEUE_FLAG_B_FRAME)
 		v4l2_vb->flags |= V4L2_BUF_FLAG_BFRAME;
 
-	if (flags & VIRTIO_VIDEO_DEQUEUE_FLAG_PFRAME)
+	if (flags & VIRTIO_VIDEO_QUEUE_FLAG_P_FRAME)
 		v4l2_vb->flags |= V4L2_BUF_FLAG_PFRAME;
 
-	if (flags & VIRTIO_VIDEO_DEQUEUE_FLAG_EOS) {
+	if (flags & VIRTIO_VIDEO_QUEUE_FLAG_EOS) {
 		v4l2_vb->flags |= V4L2_BUF_FLAG_LAST;
 		virtio_video_state_update(stream, STREAM_STATE_STOPPED);
 		virtio_video_queue_eos_event(stream);
 	}
 
-	if ((flags & VIRTIO_VIDEO_DEQUEUE_FLAG_ERR) ||
-	    (flags & VIRTIO_VIDEO_DEQUEUE_FLAG_EOS)) {
+	if ((flags & VIRTIO_VIDEO_QUEUE_FLAG_ERR) ||
+	    (flags & VIRTIO_VIDEO_QUEUE_FLAG_EOS)) {
 		vb->planes[0].bytesused = 0;
 		v4l2_m2m_buf_done(v4l2_vb, done_state);
 		return;
@@ -623,6 +611,7 @@ void virtio_video_buf_done(struct virtio_video_buffer *virtio_vb,
 	if (!V4L2_TYPE_IS_OUTPUT(vb2_queue->type)) {
 		switch (vvd->type) {
 		case VIRTIO_VIDEO_DEVICE_ENCODER:
+			BUG_ON(data_sizes == NULL);
 			for (i = 0; i < vb->num_planes; i++)
 				vb->planes[i].bytesused =
 					le32_to_cpu(data_sizes[i]);
@@ -667,7 +656,9 @@ static int virtio_video_device_open(struct file *file)
 	get_task_comm(name, current);
 	format = virtio_video_v4l2_format_to_virtio(default_fmt->desc.format);
 	virtio_video_stream_id_get(vvd, stream, &stream_id);
-	ret = virtio_video_cmd_stream_create(vvd, stream_id, format, name);
+	INIT_LIST_HEAD(&stream->async_response_list);
+
+	ret = virtio_video_cmd_stream_open(vvd, stream_id, format, name);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to create stream\n");
 		goto err_stream_create;
@@ -736,16 +727,26 @@ static int virtio_video_device_release(struct file *file)
 
 	mutex_lock(video_dev->lock);
 
+	virtio_video_cmd_stream_close(vvd, stream);
+	virtio_video_cleanup_stream_async_responses(stream);
+	/* TODO: make sure to stop the stream properly */
+	vb2_queue_release(&stream->fh.m2m_ctx->cap_q_ctx.q);
+	vb2_queue_release(&stream->fh.m2m_ctx->out_q_ctx.q);
+
+	mutex_lock(&vvd->stream_idr_lock);
+
+	idr_remove(&vvd->stream_idr, stream->stream_id);
+
 	v4l2_fh_del(&stream->fh);
 	v4l2_m2m_ctx_release(stream->fh.m2m_ctx);
 	v4l2_fh_exit(&stream->fh);
 
-	virtio_video_cmd_stream_destroy(vvd, stream->stream_id);
-	virtio_video_stream_id_put(vvd, stream->stream_id);
+	v4l2_ctrl_handler_free(&stream->ctrl_handler);
+
+	mutex_unlock(&vvd->stream_idr_lock);
+	mutex_unlock(video_dev->lock);
 
 	kfree(stream);
-
-	mutex_unlock(video_dev->lock);
 
 	return 0;
 }
@@ -804,56 +805,49 @@ static void virtio_video_device_unregister(struct virtio_video_device *vvd)
 	video_unregister_device(&vvd->video_dev);
 }
 
-static int
-virtio_video_query_capability(struct virtio_video_device *vvd, void *resp_buf,
-			      enum virtio_video_queue_type queue_type)
-{
-	int ret;
-
-	ret = virtio_video_cmd_query_capability(vvd, resp_buf,
-						vvd->max_caps_len, queue_type);
-	if (ret)
-		v4l2_err(&vvd->v4l2_dev, "failed to query capability\n");
-
-	return ret;
-}
-
 int virtio_video_device_init(struct virtio_video_device *vvd)
 {
 	int ret;
 	struct video_device *vd;
 	struct v4l2_m2m_dev *m2m_dev;
 	void *input_resp_buf, *output_resp_buf;
+	struct virtio_video_vbuffer *input_vbuf, *output_vbuf;
 
 	input_resp_buf = kzalloc(vvd->max_caps_len, GFP_KERNEL);
 	if (!input_resp_buf)
 		return -ENOMEM;
 
+	ret = virtio_video_cmd_device_query_caps(vvd, input_resp_buf,
+						 vvd->max_caps_len,
+						 VIRTIO_VIDEO_QUEUE_TYPE_INPUT,
+						 &input_vbuf);
+	if (ret) {
+		v4l2_err(&vvd->v4l2_dev, "failed to get input caps\n");
+		/* input_resp_buf is consumed */
+		return ret;
+	}
+
 	output_resp_buf = kzalloc(vvd->max_caps_len, GFP_KERNEL);
 	if (!output_resp_buf) {
 		ret = -ENOMEM;
-		goto err_output_buf;
+		goto err_release_input_vbuf;
 	}
 
-	ret = virtio_video_query_capability(vvd, input_resp_buf,
-					    VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
-	if (ret) {
-		v4l2_err(&vvd->v4l2_dev, "failed to get input caps\n");
-		goto err_input_cap;
-	}
-
-	ret = virtio_video_query_capability(vvd, output_resp_buf,
-					    VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT);
+	ret = virtio_video_cmd_device_query_caps(vvd, output_resp_buf,
+						 vvd->max_caps_len,
+						 VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT,
+						 &output_vbuf);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to get output caps\n");
-		goto err_output_cap;
+		/* output_resp_buf is consumed */
+		goto err_release_input_vbuf;
 	}
 
 	m2m_dev = v4l2_m2m_init(&virtio_video_device_m2m_ops);
 	if (IS_ERR(m2m_dev)) {
 		v4l2_err(&vvd->v4l2_dev, "failed to init m2m device\n");
 		ret = PTR_ERR(m2m_dev);
-		goto err_m2m_dev;
+		goto err_release_output_vbuf;
 	}
 
 	vvd->m2m_dev = m2m_dev;
@@ -896,47 +890,61 @@ int virtio_video_device_init(struct virtio_video_device *vvd)
 						     output_resp_buf);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to parse a function\n");
-		goto parse_cap_err;
+		goto err_v4l2_m2m_release;
 	}
 
 	ret = virtio_video_parse_virtio_control(vvd);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to query controls\n");
-		goto parse_ctrl_err;
+		goto err_clean_caps;
 	}
 
 	ret = virtio_video_device_register(vvd);
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev,
 			 "failed to init virtio video device\n");
-		goto register_err;
+		goto err_clean_control;
 	}
 
 	goto out_cleanup;
 
-register_err:
+err_clean_control:
 	virtio_video_clean_control(vvd);
-parse_ctrl_err:
+err_clean_caps:
 	virtio_video_clean_capability(vvd);
-parse_cap_err:
+err_v4l2_m2m_release:
 	v4l2_m2m_release(vvd->m2m_dev);
-err_m2m_dev:
-err_output_cap:
-err_input_cap:
+err_release_output_vbuf:
 out_cleanup:
-	kfree(output_resp_buf);
-err_output_buf:
-	kfree(input_resp_buf);
+	virtio_video_release_vbuf(vvd, output_vbuf);
+err_release_input_vbuf:
+	virtio_video_release_vbuf(vvd, input_vbuf);
 
 	return ret;
 }
 
 void virtio_video_device_deinit(struct virtio_video_device *vvd)
 {
-	vvd->commandq.ready = false;
-	vvd->eventq.ready = false;
-
 	virtio_video_device_unregister(vvd);
+
+	virtio_break_device(vvd->vdev);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0))
+	virtio_synchronize_cbs(vvd->vdev);
+	cancel_work_sync(&vvd->eventq.work);
+	virtio_reset_device(vvd->vdev);
+#else
+	/* Wait for virtio_video_process_events() to finish. Even if one of the
+	 * eventq callback is still running on another CPU and queues the work
+	 * again, it won't be able to do much since the device is already broken.
+	 */
+	cancel_work_sync(&vvd->eventq.work);
+	vvd->vdev->config->reset(vvd->vdev);
+	/* Wait for virtio_video_process_events() to finish again to make sure it
+	 * was not started by an eventq callback on another CPU.
+	 */
+	cancel_work_sync(&vvd->eventq.work);
+#endif
+
 	v4l2_m2m_release(vvd->m2m_dev);
 	virtio_video_clean_control(vvd);
 	virtio_video_clean_capability(vvd);

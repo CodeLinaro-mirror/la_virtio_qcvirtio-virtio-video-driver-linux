@@ -34,11 +34,11 @@ unsigned int virtio_video_debug_level(void)
 
 static int virtio_video_probe(struct virtio_device *vdev)
 {
-	int ret;
-	struct virtio_video_device *vvd;
-	struct virtqueue *vqs[2];
 	struct device *dev = &vdev->dev;
 	struct device *pdev = dev->parent;
+	struct virtio_video_device *vvd;
+	struct virtqueue *vqs[2];
+	int ret;
 
 	static const char *const names[] = { "commandq", "eventq" };
 	static vq_callback_t *callbacks[] = { virtio_video_cmd_cb,
@@ -69,10 +69,10 @@ static int virtio_video_probe(struct virtio_device *vdev)
 	vvd->use_dma_mem = use_dma_mem;
 	vdev->priv = vvd;
 
+	mutex_init(&vvd->stream_idr_lock);
+	idr_init(&vvd->stream_idr);
 	spin_lock_init(&vvd->resource_idr_lock);
 	idr_init(&vvd->resource_idr);
-	spin_lock_init(&vvd->stream_idr_lock);
-	idr_init(&vvd->stream_idr);
 
 	init_waitqueue_head(&vvd->wq);
 
@@ -94,8 +94,6 @@ static int virtio_video_probe(struct virtio_device *vdev)
 	init_waitqueue_head(&vvd->commandq.reclaim_queue);
 
 	INIT_WORK(&vvd->eventq.work, virtio_video_process_events);
-
-	INIT_LIST_HEAD(&vvd->pending_vbuf_list);
 
 	ret = virtio_find_vqs(vdev, 2, vqs, callbacks, names, NULL);
 	if (ret) {
@@ -132,9 +130,11 @@ static int virtio_video_probe(struct virtio_device *vdev)
 	if (ret)
 		goto err_events;
 
+	ret = virtio_video_alloc_async_responses(vvd);
+	if (ret)
+		goto err_async_resps;
+
 	virtio_device_ready(vdev);
-	vvd->commandq.ready = true;
-	vvd->eventq.ready = true;
 
 	ret = virtio_video_device_init(vvd);
 	if (ret) {
@@ -145,6 +145,8 @@ static int virtio_video_probe(struct virtio_device *vdev)
 	return 0;
 
 err_init:
+	virtio_video_free_async_responses(vvd);
+err_async_resps:
 err_events:
 err_config:
 	virtio_video_free_vbufs(vvd);
@@ -163,6 +165,7 @@ static void virtio_video_remove(struct virtio_device *vdev)
 	struct virtio_video_device *vvd = vdev->priv;
 
 	virtio_video_device_deinit(vvd);
+	virtio_video_free_async_responses(vvd);
 	virtio_video_free_vbufs(vvd);
 	vdev->config->del_vqs(vdev);
 	v4l2_device_unregister(&vvd->v4l2_dev);
