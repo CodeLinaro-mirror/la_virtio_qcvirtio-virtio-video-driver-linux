@@ -90,68 +90,6 @@ enum virtio_video_format {
 	VIRTIO_VIDEO_FORMAT_CODED_MAX = VIRTIO_VIDEO_FORMAT_VP9,
 };
 
-enum virtio_video_profile {
-	/* H.264 */
-	VIRTIO_VIDEO_PROFILE_H264_MIN = 0x100,
-	VIRTIO_VIDEO_PROFILE_H264_BASELINE = VIRTIO_VIDEO_PROFILE_H264_MIN,
-	VIRTIO_VIDEO_PROFILE_H264_MAIN,
-	VIRTIO_VIDEO_PROFILE_H264_EXTENDED,
-	VIRTIO_VIDEO_PROFILE_H264_HIGH,
-	VIRTIO_VIDEO_PROFILE_H264_HIGH10PROFILE,
-	VIRTIO_VIDEO_PROFILE_H264_HIGH422PROFILE,
-	VIRTIO_VIDEO_PROFILE_H264_HIGH444PREDICTIVEPROFILE,
-	VIRTIO_VIDEO_PROFILE_H264_SCALABLEBASELINE,
-	VIRTIO_VIDEO_PROFILE_H264_SCALABLEHIGH,
-	VIRTIO_VIDEO_PROFILE_H264_STEREOHIGH,
-	VIRTIO_VIDEO_PROFILE_H264_MULTIVIEWHIGH,
-	VIRTIO_VIDEO_PROFILE_H264_MAX = VIRTIO_VIDEO_PROFILE_H264_MULTIVIEWHIGH,
-
-	/* HEVC */
-	VIRTIO_VIDEO_PROFILE_HEVC_MIN = 0x200,
-	VIRTIO_VIDEO_PROFILE_HEVC_MAIN = VIRTIO_VIDEO_PROFILE_HEVC_MIN,
-	VIRTIO_VIDEO_PROFILE_HEVC_MAIN10,
-	VIRTIO_VIDEO_PROFILE_HEVC_MAIN_STILL_PICTURE,
-	VIRTIO_VIDEO_PROFILE_HEVC_MAX =
-		VIRTIO_VIDEO_PROFILE_HEVC_MAIN_STILL_PICTURE,
-
-	/* VP8 */
-	VIRTIO_VIDEO_PROFILE_VP8_MIN = 0x300,
-	VIRTIO_VIDEO_PROFILE_VP8_PROFILE0 = VIRTIO_VIDEO_PROFILE_VP8_MIN,
-	VIRTIO_VIDEO_PROFILE_VP8_PROFILE1,
-	VIRTIO_VIDEO_PROFILE_VP8_PROFILE2,
-	VIRTIO_VIDEO_PROFILE_VP8_PROFILE3,
-	VIRTIO_VIDEO_PROFILE_VP8_MAX = VIRTIO_VIDEO_PROFILE_VP8_PROFILE3,
-
-	/* VP9 */
-	VIRTIO_VIDEO_PROFILE_VP9_MIN = 0x400,
-	VIRTIO_VIDEO_PROFILE_VP9_PROFILE0 = VIRTIO_VIDEO_PROFILE_VP9_MIN,
-	VIRTIO_VIDEO_PROFILE_VP9_PROFILE1,
-	VIRTIO_VIDEO_PROFILE_VP9_PROFILE2,
-	VIRTIO_VIDEO_PROFILE_VP9_PROFILE3,
-	VIRTIO_VIDEO_PROFILE_VP9_MAX = VIRTIO_VIDEO_PROFILE_VP9_PROFILE3,
-};
-
-enum virtio_video_level {
-	/* H.264 */
-	VIRTIO_VIDEO_LEVEL_H264_MIN = 0x100,
-	VIRTIO_VIDEO_LEVEL_H264_1_0 = VIRTIO_VIDEO_LEVEL_H264_MIN,
-	VIRTIO_VIDEO_LEVEL_H264_1_1,
-	VIRTIO_VIDEO_LEVEL_H264_1_2,
-	VIRTIO_VIDEO_LEVEL_H264_1_3,
-	VIRTIO_VIDEO_LEVEL_H264_2_0,
-	VIRTIO_VIDEO_LEVEL_H264_2_1,
-	VIRTIO_VIDEO_LEVEL_H264_2_2,
-	VIRTIO_VIDEO_LEVEL_H264_3_0,
-	VIRTIO_VIDEO_LEVEL_H264_3_1,
-	VIRTIO_VIDEO_LEVEL_H264_3_2,
-	VIRTIO_VIDEO_LEVEL_H264_4_0,
-	VIRTIO_VIDEO_LEVEL_H264_4_1,
-	VIRTIO_VIDEO_LEVEL_H264_4_2,
-	VIRTIO_VIDEO_LEVEL_H264_5_0,
-	VIRTIO_VIDEO_LEVEL_H264_5_1,
-	VIRTIO_VIDEO_LEVEL_H264_MAX = VIRTIO_VIDEO_LEVEL_H264_5_1,
-};
-
 /*
  * Config
  */
@@ -163,56 +101,149 @@ struct virtio_video_config {
 };
 
 /*
- * Commands
+ * Commandq definitions
  */
 
 enum virtio_video_cmd_type {
-	/* Command */
-	VIRTIO_VIDEO_CMD_QUERY_CAPABILITY = 0x0100,
-	VIRTIO_VIDEO_CMD_STREAM_CREATE,
-	VIRTIO_VIDEO_CMD_STREAM_DESTROY,
+	/* Device */
+	VIRTIO_VIDEO_CMD_DEVICE_QUERY_CAPS = 0x0100,
+
+	/* Stream */
+	VIRTIO_VIDEO_CMD_STREAM_OPEN = 0x200,
+	VIRTIO_VIDEO_CMD_STREAM_CLOSE,
+	VIRTIO_VIDEO_CMD_STREAM_SET_PARAMS,
+	VIRTIO_VIDEO_CMD_STREAM_GET_PARAMS,
+	VIRTIO_VIDEO_CMD_STREAM_UNBLOCK,
 	VIRTIO_VIDEO_CMD_STREAM_DRAIN,
-	VIRTIO_VIDEO_CMD_RESOURCE_ATTACH,
-	VIRTIO_VIDEO_CMD_RESOURCE_QUEUE,
+	VIRTIO_VIDEO_CMD_STREAM_QUEUE_RESET,
+	VIRTIO_VIDEO_CMD_STREAM_RESOURCE_QUEUE,
+
+	/* Deprecated since spec drafts v4-v9
+	 * TODO: merge into QUERY_CAPS, SET/GET_PARAMS to update the
+	 * implementation against the latest spec draft
+	 */
+
+	/* Device */
+	VIRTIO_VIDEO_CMD_QUERY_CONTROL = 0x300,
+
+	/* Stream */
+	VIRTIO_VIDEO_CMD_RESOURCE_ATTACH = 0x400,
 	VIRTIO_VIDEO_CMD_QUEUE_DETACH_RESOURCES,
-	VIRTIO_VIDEO_CMD_QUEUE_CLEAR,
-	VIRTIO_VIDEO_CMD_GET_PARAMS,
-	VIRTIO_VIDEO_CMD_SET_PARAMS,
-	VIRTIO_VIDEO_CMD_QUERY_CONTROL,
 	VIRTIO_VIDEO_CMD_GET_CONTROL,
 	VIRTIO_VIDEO_CMD_SET_CONTROL,
-
-	/* Response */
-	VIRTIO_VIDEO_RESP_OK_NODATA = 0x0200,
-	VIRTIO_VIDEO_RESP_OK_QUERY_CAPABILITY,
-	VIRTIO_VIDEO_RESP_OK_RESOURCE_QUEUE,
-	VIRTIO_VIDEO_RESP_OK_GET_PARAMS,
-	VIRTIO_VIDEO_RESP_OK_QUERY_CONTROL,
-	VIRTIO_VIDEO_RESP_OK_GET_CONTROL,
-
-	VIRTIO_VIDEO_RESP_ERR_INVALID_OPERATION = 0x0300,
-	VIRTIO_VIDEO_RESP_ERR_OUT_OF_MEMORY,
-	VIRTIO_VIDEO_RESP_ERR_INVALID_STREAM_ID,
-	VIRTIO_VIDEO_RESP_ERR_INVALID_RESOURCE_ID,
-	VIRTIO_VIDEO_RESP_ERR_INVALID_PARAMETER,
-	VIRTIO_VIDEO_RESP_ERR_UNSUPPORTED_CONTROL,
 };
+
+enum virtio_video_result_type {
+	VIRTIO_VIDEO_RESULT_OK = 0,
+	VIRTIO_VIDEO_RESULT_ERROR,
+};
+
+#define VIRTIO_VIDEO_QUEUE_TYPE_MAIN 0
+#define VIRTIO_VIDEO_QUEUE_TYPE_INPUT 1
+#define VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT 2
 
 struct virtio_video_cmd_hdr {
 	__le32 type; /* One of enum virtio_video_cmd_type */
 	__le32 stream_id;
+	__le32 queue_type; /* One of VIRTIO_VIDEO_QUEUE_TYPE_* */
+	__le32 async_response_cookie;
 };
 
-/* VIRTIO_VIDEO_CMD_QUERY_CAPABILITY */
-enum virtio_video_queue_type {
-	VIRTIO_VIDEO_QUEUE_TYPE_INPUT = 0x100,
-	VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT,
+/*
+ * Eventq definitions
+ */
+
+enum virtio_video_event_type {
+	VIRTIO_VIDEO_ASYNC_RESP_STREAM_OPEN = 0x200,
+	VIRTIO_VIDEO_ASYNC_RESP_STREAM_CLOSE,
+	VIRTIO_VIDEO_ASYNC_RESP_STREAM_SET_PARAMS,
+	VIRTIO_VIDEO_ASYNC_RESP_STREAM_GET_PARAMS,
+	VIRTIO_VIDEO_ASYNC_RESP_STREAM_UNBLOCK,
+	VIRTIO_VIDEO_ASYNC_RESP_STREAM_DRAIN,
+	VIRTIO_VIDEO_ASYNC_RESP_STREAM_QUEUE_RESET,
+	VIRTIO_VIDEO_ASYNC_RESP_STREAM_RESOURCE_QUEUE,
+
+	/* Deprecated since spec drafts v4-v9
+	 * TODO: merge into QUERY_CAPS, SET/GET_PARAMS to update the
+	 * implementation against the latest spec draft
+	 */
+	VIRTIO_VIDEO_ASYNC_RESP_RESOURCE_ATTACH = 0x400,
+	VIRTIO_VIDEO_ASYNC_RESP_QUEUE_DETACH_RESOURCES,
+	VIRTIO_VIDEO_ASYNC_RESP_GET_CONTROL,
+	VIRTIO_VIDEO_ASYNC_RESP_SET_CONTROL,
+
+	/* Deprecated since spec draft v8
+	 * TODO: merge into CLOSE, DRAIN to update the implementation against the
+	 * latest spec draft
+	 */
+	VIRTIO_VIDEO_EVENT_ERROR = 0x500,
 };
 
-struct virtio_video_query_capability {
-	struct virtio_video_cmd_hdr hdr;
-	__le32 queue_type; /* One of VIRTIO_VIDEO_QUEUE_TYPE_* types */
+#define VIRTIO_VIDEO_EVENT_FLAG_ERROR (1 << 0)
+#define VIRTIO_VIDEO_EVENT_FLAG_STANDALONE (1 << 1)
+#define VIRTIO_VIDEO_EVENT_FLAG_CANCELED (1 << 2)
+
+struct virtio_video_event_header {
+	__le32 event_type; /* One of VIRTIO_VIDEO_EVENT_* types */
+	__le32 stream_id;
+	__le32 async_response_cookie;
+	__le32 event_flags; /* Bitmask of VIRTIO_VIDEO_EVENT_FLAG_* */
+};
+
+/*
+ * TLV format
+ */
+
+#define VIRTIO_VIDEO_TLV_CODED_SET 1
+#define VIRTIO_VIDEO_TLV_RAW_SET 2
+#define VIRTIO_VIDEO_TLV_LINK 3
+#define VIRTIO_VIDEO_TLV_CODED_FORMAT 4
+#define VIRTIO_VIDEO_TLV_RAW_FORMAT 5
+#define VIRTIO_VIDEO_TLV_CODED_RESOURCES 6
+#define VIRTIO_VIDEO_TLV_RAW_RESOURCES 7
+#define VIRTIO_VIDEO_TLV_RESOURCE_GUEST_PAGES 8
+#define VIRTIO_VIDEO_TLV_RESOURCE_VIRTIO_OBJECT 9
+#define VIRTIO_VIDEO_TLV_CROP 10
+#define VIRTIO_VIDEO_TLV_V4L2_CONTROLS 11
+
+struct virtio_video_tlv {
+	__le32 type;
+	__le32 length;
+	/* Followed by __u8 value[length]; */
+};
+
+struct virtio_video_range {
+	__le32 min;
+	__le32 max;
+	__le32 step;
 	__u8 padding[4];
+};
+
+struct virtio_video_tlv_v4l2_int_caps {
+	struct virtio_video_range range;
+};
+
+struct virtio_video_tlv_v4l2_int_val {
+	__le32 value;
+};
+
+#define MASK(x) (1 << (x))
+
+struct virtio_video_tlv_v4l2_enum_caps {
+	__le32 bitmask; /* Bitmask of MASK(<enum value>) */
+};
+
+struct virtio_video_tlv_v4l2_enum_val {
+	__u8 value; /* <enum value> */
+	__u8 padding[3];
+};
+
+/* Commands */
+
+/* VIRTIO_VIDEO_CMD_DEVICE_QUERY_CAPS */
+struct virtio_video_device_query_caps {
+	__le32 type; /* One of enum virtio_video_cmd_type */
+	__le32 queue_type; /* One of VIRTIO_VIDEO_QUEUE_TYPE_{INPUT|OUTPUT} types */
 };
 
 enum virtio_video_planes_layout_flag {
@@ -220,19 +251,12 @@ enum virtio_video_planes_layout_flag {
 	VIRTIO_VIDEO_PLANES_LAYOUT_PER_PLANE = 1 << 1,
 };
 
-struct virtio_video_format_range {
-	__le32 min;
-	__le32 max;
-	__le32 step;
-	__u8 padding[4];
-};
-
 struct virtio_video_format_frame {
-	struct virtio_video_format_range width;
-	struct virtio_video_format_range height;
+	struct virtio_video_range width;
+	struct virtio_video_range height;
 	__le32 num_rates;
 	__u8 padding[4];
-	/* Followed by struct virtio_video_format_range frame_rates[] */
+	/* Followed by struct virtio_video_range frame_rates[] */
 };
 
 struct virtio_video_format_desc {
@@ -244,20 +268,20 @@ struct virtio_video_format_desc {
 	/* Followed by struct virtio_video_format_frame frames[] */
 };
 
-struct virtio_video_query_capability_resp {
-	struct virtio_video_cmd_hdr hdr;
+struct virtio_video_device_query_caps_resp {
+	__le32 result; /* VIRTIO_VIDEO_RESULT_* */
 	__le32 num_descs;
-	__u8 padding[4];
 	/* Followed by struct virtio_video_format_desc descs[] */
 };
 
-/* VIRTIO_VIDEO_CMD_STREAM_CREATE */
+/* VIRTIO_VIDEO_CMD_STREAM_OPEN */
 enum virtio_video_mem_type {
 	VIRTIO_VIDEO_MEM_TYPE_GUEST_PAGES,
 };
 
-struct virtio_video_stream_create {
+struct virtio_video_stream_open {
 	struct virtio_video_cmd_hdr hdr;
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN */
 	__le32 in_mem_type; /* One of VIRTIO_VIDEO_MEM_TYPE_* types */
 	__le32 out_mem_type; /* One of VIRTIO_VIDEO_MEM_TYPE_* types */
 	__le32 coded_format; /* One of VIRTIO_VIDEO_FORMAT_* types */
@@ -265,14 +289,16 @@ struct virtio_video_stream_create {
 	__u8 tag[64];
 };
 
-/* VIRTIO_VIDEO_CMD_STREAM_DESTROY */
-struct virtio_video_stream_destroy {
+/* VIRTIO_VIDEO_CMD_STREAM_CLOSE */
+struct virtio_video_stream_close {
 	struct virtio_video_cmd_hdr hdr;
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN */
 };
 
 /* VIRTIO_VIDEO_CMD_STREAM_DRAIN */
 struct virtio_video_stream_drain {
 	struct virtio_video_cmd_hdr hdr;
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN for now */
 };
 
 /* VIRTIO_VIDEO_CMD_RESOURCE_ATTACH */
@@ -300,58 +326,59 @@ union virtio_video_resource {
 };
 
 struct virtio_video_resource_attach {
-	__le32 cmd_type;
-	__le32 stream_id;
-	__le32 queue_type; /* VIRTIO_VIDEO_QUEUE_TYPE_* */
+	struct virtio_video_cmd_hdr hdr;
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN for now */
+	__le32 queue_type; /* VIRTIO_VIDEO_QUEUE_TYPE_{INPUT|OUTPUT} */
 	__le32 resource_id;
 	/* Followed by struct virtio_video_resource resources[] */
 };
 
 /* VIRTIO_VIDEO_CMD_RESOURCE_QUEUE */
+
+/* Buffer flags */
+/* Encoder only */
+#define VIRTIO_VIDEO_QUEUE_FLAG_KEY_FRAME (1 << 0)
+#define VIRTIO_VIDEO_QUEUE_FLAG_P_FRAME (1 << 1)
+#define VIRTIO_VIDEO_QUEUE_FLAG_B_FRAME (1 << 2)
+/* Replaced in the latest drafts, keep for now */
+#define VIRTIO_VIDEO_QUEUE_FLAG_ERR (1 << 16)
+#define VIRTIO_VIDEO_QUEUE_FLAG_EOS (1 << 17)
+
 struct virtio_video_resource_queue {
-	__le32 cmd_type;
-	__le32 stream_id;
-	__le32 queue_type; /* VIRTIO_VIDEO_QUEUE_TYPE_* */
+	struct virtio_video_cmd_hdr hdr;
 	__le32 resource_id;
-	__le32 flags; /* Bitmask with VIRTIO_VIDEO_ENQUEUE_FLAG_ * */
-	__u8 padding[4];
+	__le32 flags; /* Bitmask of VIRTIO_VIDEO_QUEUE_FLAG_* */
 	__le64 timestamp;
+	__le32 offsets[VIRTIO_VIDEO_MAX_PLANES];
 	__le32 data_sizes[VIRTIO_VIDEO_MAX_PLANES];
 };
 
-enum virtio_video_dequeue_flag {
-	VIRTIO_VIDEO_DEQUEUE_FLAG_ERR = 0,
-	VIRTIO_VIDEO_DEQUEUE_FLAG_EOS,
-
-	/* Encoder only */
-	VIRTIO_VIDEO_DEQUEUE_FLAG_KEY_FRAME,
-	VIRTIO_VIDEO_DEQUEUE_FLAG_PFRAME,
-	VIRTIO_VIDEO_DEQUEUE_FLAG_BFRAME,
-};
-
-struct virtio_video_resource_queue_resp {
-	struct virtio_video_cmd_hdr hdr;
-	__le32 flags;
+struct virtio_video_resource_queue_async_resp {
+	struct virtio_video_event_header hdr;
+	__le32 flags; /* Bitmask of VIRTIO_VIDEO_QUEUE_FLAG_* */
+	__u8 padding[4];
 	__le64 timestamp;
+	__le32 offsets[VIRTIO_VIDEO_MAX_PLANES];
 	__le32 data_sizes[VIRTIO_VIDEO_MAX_PLANES];
 };
 
 /* VIRTIO_VIDEO_CMD_QUEUE_DETACH_RESOURCES */
 struct virtio_video_queue_detach_resources {
-	__le32 cmd_type;
-	__le32 stream_id;
-	__le32 queue_type; /* One of VIRTIO_VIDEO_QUEUE_TYPE_* types */
-	__u8 padding[4];
-};
-
-/* VIRTIO_VIDEO_CMD_QUEUE_CLEAR */
-struct virtio_video_queue_clear {
 	struct virtio_video_cmd_hdr hdr;
-	__le32 queue_type; /* One of VIRTIO_VIDEO_QUEUE_TYPE_* types */
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN for now */
+	__le32 queue_type; /* VIRTIO_VIDEO_QUEUE_TYPE_{INPUT|OUTPUT} */
 	__u8 padding[4];
 };
 
-/* VIRTIO_VIDEO_CMD_GET_PARAMS */
+/* VIRTIO_VIDEO_CMD_QUEUE_RESET */
+struct virtio_video_queue_reset {
+	struct virtio_video_cmd_hdr hdr;
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN */
+	__le32 reset_queue_type; /* VIRTIO_VIDEO_QUEUE_TYPE_{INPUT|OUTPUT} */
+	__u8 padding[4];
+};
+
+/* VIRTIO_VIDEO_CMD_STREAM_GET_PARAMS */
 struct virtio_video_plane_format {
 	__le32 plane_size;
 	__le32 stride;
@@ -385,33 +412,26 @@ struct virtio_video_params {
 	struct virtio_video_plane_format plane_formats[VIRTIO_VIDEO_MAX_PLANES];
 };
 
-struct virtio_video_get_params {
+struct virtio_video_stream_get_params {
 	struct virtio_video_cmd_hdr hdr;
-	__le32 queue_type; /* One of VIRTIO_VIDEO_QUEUE_TYPE_* types */
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN for now */
+	__le32 queue_type; /* VIRTIO_VIDEO_QUEUE_TYPE_{INPUT|OUTPUT} */
 	__u8 padding[4];
 };
 
-struct virtio_video_get_params_resp {
-	struct virtio_video_cmd_hdr hdr;
+struct virtio_video_stream_get_params_async_resp {
+	struct virtio_video_event_header hdr;
 	struct virtio_video_params params;
 };
 
-/* VIRTIO_VIDEO_CMD_SET_PARAMS */
-struct virtio_video_set_params {
+/* VIRTIO_VIDEO_CMD_STREAM_SET_PARAMS */
+struct virtio_video_stream_set_params {
 	struct virtio_video_cmd_hdr hdr;
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN for now */
 	struct virtio_video_params params;
 };
 
 /* VIRTIO_VIDEO_CMD_QUERY_CONTROL */
-enum virtio_video_control_type {
-	VIRTIO_VIDEO_CONTROL_BITRATE = 1,
-	VIRTIO_VIDEO_CONTROL_PROFILE,
-	VIRTIO_VIDEO_CONTROL_LEVEL,
-	VIRTIO_VIDEO_CONTROL_FORCE_KEYFRAME,
-	VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY_ENABLE,
-	VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY,
-};
-
 struct virtio_video_query_control_profile {
 	__le32 format; /* One of VIRTIO_VIDEO_FORMAT_* */
 	__u8 padding[4];
@@ -423,11 +443,9 @@ struct virtio_video_query_control_level {
 };
 
 struct virtio_video_query_control {
-	struct virtio_video_cmd_hdr hdr;
-	__le32 control; /* One of VIRTIO_VIDEO_CONTROL_* types */
-	__u8 padding[4];
-	/*
-	 * Followed by a value of struct virtio_video_query_control_*
+	__le32 type; /* One of enum virtio_video_cmd_type */
+	__le32 control; /* One of V4L2_CID_* types */
+	/* Followed by a value of struct virtio_video_query_control_*
 	 * in accordance with the value of control.
 	 */
 };
@@ -445,14 +463,16 @@ struct virtio_video_query_control_resp_level {
 };
 
 struct virtio_video_query_control_resp {
-	struct virtio_video_cmd_hdr hdr;
+	__le32 result; /* VIRTIO_VIDEO_RESULT_* */
+	__u8 padding[4];
 	/* Followed by one of struct virtio_video_query_control_resp_* */
 };
 
 /* VIRTIO_VIDEO_CMD_GET_CONTROL */
 struct virtio_video_get_control {
 	struct virtio_video_cmd_hdr hdr;
-	__le32 control; /* One of VIRTIO_VIDEO_CONTROL_* types */
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN for now */
+	__le32 control; /* One of V4L2_CID_* types */
 	__u8 padding[4];
 };
 
@@ -481,38 +501,16 @@ struct virtio_video_control_val_dec_display_delay {
 	__u8 padding[4];
 };
 
-struct virtio_video_get_control_resp {
-	struct virtio_video_cmd_hdr hdr;
+struct virtio_video_get_control_async_resp {
+	struct virtio_video_event_header hdr;
 	/* Followed by one of struct virtio_video_control_val_* */
 };
 
 /* VIRTIO_VIDEO_CMD_SET_CONTROL */
 struct virtio_video_set_control {
 	struct virtio_video_cmd_hdr hdr;
-	__le32 control; /* One of VIRTIO_VIDEO_CONTROL_* types */
-	__u8 padding[4];
-	/* Followed by one of struct virtio_video_control_val_* */
-};
-
-struct virtio_video_set_control_resp {
-	struct virtio_video_cmd_hdr hdr;
-};
-
-/*
- * Events
- */
-
-enum virtio_video_event_type {
-	/* For all devices */
-	VIRTIO_VIDEO_EVENT_ERROR = 0x0100,
-
-	/* For decoder only */
-	VIRTIO_VIDEO_EVENT_DECODER_RESOLUTION_CHANGED = 0x0200,
-};
-
-struct virtio_video_event {
-	__le32 event_type; /* One of VIRTIO_VIDEO_EVENT_* types */
-	__le32 stream_id;
+	/* hdr.queue_type must be VIRTIO_VIDEO_QUEUE_TYPE_MAIN for now */
+	/* Followed by a TLV with the control */
 };
 
 #endif /* _UAPI_LINUX_VIRTIO_VIDEO_H */

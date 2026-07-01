@@ -13,97 +13,6 @@ struct virtio_video_convert_table {
 	uint32_t v4l2_value;
 };
 
-static struct virtio_video_convert_table level_table[] = {
-	{ VIRTIO_VIDEO_LEVEL_H264_1_0, V4L2_MPEG_VIDEO_H264_LEVEL_1_0 },
-	{ VIRTIO_VIDEO_LEVEL_H264_1_1, V4L2_MPEG_VIDEO_H264_LEVEL_1_1 },
-	{ VIRTIO_VIDEO_LEVEL_H264_1_2, V4L2_MPEG_VIDEO_H264_LEVEL_1_2 },
-	{ VIRTIO_VIDEO_LEVEL_H264_1_3, V4L2_MPEG_VIDEO_H264_LEVEL_1_3 },
-	{ VIRTIO_VIDEO_LEVEL_H264_2_0, V4L2_MPEG_VIDEO_H264_LEVEL_2_0 },
-	{ VIRTIO_VIDEO_LEVEL_H264_2_1, V4L2_MPEG_VIDEO_H264_LEVEL_2_1 },
-	{ VIRTIO_VIDEO_LEVEL_H264_2_2, V4L2_MPEG_VIDEO_H264_LEVEL_2_2 },
-	{ VIRTIO_VIDEO_LEVEL_H264_3_0, V4L2_MPEG_VIDEO_H264_LEVEL_3_0 },
-	{ VIRTIO_VIDEO_LEVEL_H264_3_1, V4L2_MPEG_VIDEO_H264_LEVEL_3_1 },
-	{ VIRTIO_VIDEO_LEVEL_H264_3_2, V4L2_MPEG_VIDEO_H264_LEVEL_3_2 },
-	{ VIRTIO_VIDEO_LEVEL_H264_4_0, V4L2_MPEG_VIDEO_H264_LEVEL_4_0 },
-	{ VIRTIO_VIDEO_LEVEL_H264_4_1, V4L2_MPEG_VIDEO_H264_LEVEL_4_1 },
-	{ VIRTIO_VIDEO_LEVEL_H264_4_2, V4L2_MPEG_VIDEO_H264_LEVEL_4_2 },
-	{ VIRTIO_VIDEO_LEVEL_H264_5_0, V4L2_MPEG_VIDEO_H264_LEVEL_5_0 },
-	{ VIRTIO_VIDEO_LEVEL_H264_5_1, V4L2_MPEG_VIDEO_H264_LEVEL_5_1 },
-	{ 0 },
-};
-
-uint32_t virtio_video_level_to_v4l2(uint32_t level)
-{
-	size_t idx;
-
-	for (idx = 0; idx < ARRAY_SIZE(level_table); idx++) {
-		if (level_table[idx].virtio_value == level)
-			return level_table[idx].v4l2_value;
-	}
-
-	return 0;
-}
-
-uint32_t virtio_video_v4l2_level_to_virtio(uint32_t v4l2_level)
-{
-	size_t idx;
-
-	for (idx = 0; idx < ARRAY_SIZE(level_table); idx++) {
-		if (level_table[idx].v4l2_value == v4l2_level)
-			return level_table[idx].virtio_value;
-	}
-
-	return 0;
-}
-
-static struct virtio_video_convert_table profile_table[] = {
-	{ VIRTIO_VIDEO_PROFILE_H264_BASELINE,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE },
-	{ VIRTIO_VIDEO_PROFILE_H264_MAIN, V4L2_MPEG_VIDEO_H264_PROFILE_MAIN },
-	{ VIRTIO_VIDEO_PROFILE_H264_EXTENDED,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_EXTENDED },
-	{ VIRTIO_VIDEO_PROFILE_H264_HIGH, V4L2_MPEG_VIDEO_H264_PROFILE_HIGH },
-	{ VIRTIO_VIDEO_PROFILE_H264_HIGH10PROFILE,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_10 },
-	{ VIRTIO_VIDEO_PROFILE_H264_HIGH422PROFILE,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_422 },
-	{ VIRTIO_VIDEO_PROFILE_H264_HIGH444PREDICTIVEPROFILE,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_444_PREDICTIVE },
-	{ VIRTIO_VIDEO_PROFILE_H264_SCALABLEBASELINE,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_BASELINE },
-	{ VIRTIO_VIDEO_PROFILE_H264_SCALABLEHIGH,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_HIGH },
-	{ VIRTIO_VIDEO_PROFILE_H264_STEREOHIGH,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_STEREO_HIGH },
-	{ VIRTIO_VIDEO_PROFILE_H264_MULTIVIEWHIGH,
-	  V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH },
-	{ 0 },
-};
-
-uint32_t virtio_video_profile_to_v4l2(uint32_t profile)
-{
-	size_t idx;
-
-	for (idx = 0; idx < ARRAY_SIZE(profile_table); idx++) {
-		if (profile_table[idx].virtio_value == profile)
-			return profile_table[idx].v4l2_value;
-	}
-
-	return 0;
-}
-
-uint32_t virtio_video_v4l2_profile_to_virtio(uint32_t v4l2_profile)
-{
-	size_t idx;
-
-	for (idx = 0; idx < ARRAY_SIZE(profile_table); idx++) {
-		if (profile_table[idx].v4l2_value == v4l2_profile)
-			return profile_table[idx].virtio_value;
-	}
-
-	return 0;
-}
-
 /* Unfortunately all necessary RGB formats definitions are not
  * available before kernel version 5.2. So for compatibility and
  * according to other available examples these formats are mapped
@@ -147,43 +56,6 @@ uint32_t virtio_video_v4l2_format_to_virtio(uint32_t v4l2_format)
 	for (idx = 0; idx < ARRAY_SIZE(format_table); idx++) {
 		if (format_table[idx].v4l2_value == v4l2_format)
 			return format_table[idx].virtio_value;
-	}
-
-	return 0;
-}
-
-static struct virtio_video_convert_table control_table[] = {
-	{ VIRTIO_VIDEO_CONTROL_BITRATE, V4L2_CID_MPEG_VIDEO_BITRATE },
-	{ VIRTIO_VIDEO_CONTROL_PROFILE, V4L2_CID_MPEG_VIDEO_H264_PROFILE },
-	{ VIRTIO_VIDEO_CONTROL_LEVEL, V4L2_CID_MPEG_VIDEO_H264_LEVEL },
-	{ VIRTIO_VIDEO_CONTROL_FORCE_KEYFRAME,
-	  V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME },
-	{ VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY_ENABLE,
-	  V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY_ENABLE },
-	{ VIRTIO_VIDEO_CONTROL_DEC_DISPLAY_DELAY,
-	  V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY },
-	{ 0 },
-};
-
-uint32_t virtio_video_control_to_v4l2(uint32_t control)
-{
-	size_t idx;
-
-	for (idx = 0; idx < ARRAY_SIZE(control_table); idx++) {
-		if (control_table[idx].virtio_value == control)
-			return control_table[idx].v4l2_value;
-	}
-
-	return 0;
-}
-
-uint32_t virtio_video_v4l2_control_to_virtio(uint32_t v4l2_control)
-{
-	size_t idx;
-
-	for (idx = 0; idx < ARRAY_SIZE(control_table); idx++) {
-		if (control_table[idx].v4l2_value == v4l2_control)
-			return control_table[idx].virtio_value;
 	}
 
 	return 0;
@@ -269,8 +141,7 @@ int virtio_video_frmsizeenum_from_fmt(struct video_format *fmt,
 	return 0;
 }
 
-static bool in_stepped_interval(struct virtio_video_format_range range,
-				uint32_t point)
+static bool in_stepped_interval(struct virtio_video_range range, uint32_t point)
 {
 	if (point < range.min || point > range.max)
 		return false;
@@ -289,7 +160,7 @@ int virtio_video_frmivalenum_from_fmt(struct video_format *fmt,
 {
 	struct video_format_frame *frm;
 	struct virtio_video_format_frame *frame = NULL;
-	struct virtio_video_format_range *frate;
+	struct virtio_video_range *frate;
 	int idx = f->index;
 	int f_idx;
 

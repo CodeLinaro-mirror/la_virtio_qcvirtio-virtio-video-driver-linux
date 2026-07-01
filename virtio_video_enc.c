@@ -68,31 +68,17 @@ static int virtio_video_enc_s_ctrl(struct v4l2_ctrl *ctrl)
 	int ret = 0;
 	struct virtio_video_stream *stream = ctrl2stream(ctrl);
 	struct virtio_video_device *vvd = to_virtio_vd(stream->video_dev);
-	uint32_t control, value;
 
 	if (virtio_video_state(stream) == STREAM_STATE_ERROR)
 		return -EIO;
 
-	control = virtio_video_v4l2_control_to_virtio(ctrl->id);
-
 	switch (ctrl->id) {
 	case V4L2_CID_MPEG_VIDEO_BITRATE:
-		ret = virtio_video_cmd_set_control(vvd, stream->stream_id,
-						   control, ctrl->val);
-		break;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
-		value = virtio_video_v4l2_level_to_virtio(ctrl->val);
-		ret = virtio_video_cmd_set_control(vvd, stream->stream_id,
-						   control, value);
-		break;
 	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
-		value = virtio_video_v4l2_profile_to_virtio(ctrl->val);
-		ret = virtio_video_cmd_set_control(vvd, stream->stream_id,
-						   control, value);
-		break;
 	case V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME:
 		ret = virtio_video_cmd_set_control(vvd, stream->stream_id,
-						   control, 1 /*ignored*/);
+						   ctrl->id, ctrl->val);
 		break;
 	default:
 		ret = -EINVAL;
@@ -446,7 +432,7 @@ static int virtio_video_enc_try_framerate(struct virtio_video_stream *stream,
 
 	frame = stream->current_frame;
 	for (rate_idx = 0; rate_idx < frame->frame.num_rates; rate_idx++) {
-		struct virtio_video_format_range *frame_rate =
+		struct virtio_video_range *frame_rate =
 			&frame->frame_rates[rate_idx];
 
 		if (within_range(frame_rate->min, fps, frame_rate->max))
@@ -521,8 +507,8 @@ static int virtio_video_enc_s_parm(struct file *file, void *priv,
 	virtio_video_format_fill_default_info(&info, &stream->in_info);
 	info.frame_rate = frame_rate;
 
-	virtio_video_cmd_set_params(vvd, stream, &info,
-				    VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
+	virtio_video_cmd_stream_set_params(vvd, stream, &info,
+					   VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
 	virtio_video_stream_get_params(vvd, stream);
 
 	out->capability = V4L2_CAP_TIMEPERFRAME;
@@ -552,13 +538,13 @@ static int virtio_video_enc_s_selection(struct file *file, void *fh,
 		return -EINVAL;
 	}
 
-	ret = virtio_video_cmd_set_params(vvd, stream, &stream->in_info,
-					  VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
+	ret = virtio_video_cmd_stream_set_params(vvd, stream, &stream->in_info,
+						 VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
 	if (ret)
 		return -EINVAL;
 
-	return virtio_video_cmd_get_params(vvd, stream,
-					   VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
+	return virtio_video_cmd_stream_get_params(
+		vvd, stream, VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
 }
 
 static const struct v4l2_ioctl_ops virtio_video_enc_ioctl_ops = {

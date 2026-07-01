@@ -29,7 +29,7 @@ static int virtio_video_dec_start_streaming(struct vb2_queue *vq,
 
 static void virtio_video_dec_stop_streaming(struct vb2_queue *vq)
 {
-	int queue_type;
+	uint32_t queue_type;
 	struct virtio_video_stream *stream = vb2_get_drv_priv(vq);
 
 	if (V4L2_TYPE_IS_OUTPUT(vq->type))
@@ -57,21 +57,15 @@ static int virtio_video_dec_s_ctrl(struct v4l2_ctrl *ctrl)
 	int ret = 0;
 	struct virtio_video_stream *stream = ctrl2stream(ctrl);
 	struct virtio_video_device *vvd = to_virtio_vd(stream->video_dev);
-	uint32_t control;
 
 	if (virtio_video_state(stream) == STREAM_STATE_ERROR)
 		return -EIO;
 
-	control = virtio_video_v4l2_control_to_virtio(ctrl->id);
-
 	switch (ctrl->id) {
 	case V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY_ENABLE:
-		ret = virtio_video_cmd_set_control(vvd, stream->stream_id,
-						   control, ctrl->val);
-		break;
 	case V4L2_CID_MPEG_VIDEO_DEC_DISPLAY_DELAY:
 		ret = virtio_video_cmd_set_control(vvd, stream->stream_id,
-						   control, ctrl->val);
+						   ctrl->id, ctrl->val);
 		break;
 	default:
 		ret = -EINVAL;
@@ -412,13 +406,13 @@ static int virtio_video_dec_s_selection(struct file *file, void *fh,
 		return -EINVAL;
 	}
 
-	ret = virtio_video_cmd_set_params(vvd, stream, &stream->out_info,
-					  VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT);
+	ret = virtio_video_cmd_stream_set_params(
+		vvd, stream, &stream->out_info, VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT);
 	if (ret)
 		return -EINVAL;
 
-	return virtio_video_cmd_get_params(vvd, stream,
-					   VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT);
+	return virtio_video_cmd_stream_get_params(
+		vvd, stream, VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT);
 }
 
 static const struct v4l2_ioctl_ops virtio_video_dec_ioctl_ops = {
