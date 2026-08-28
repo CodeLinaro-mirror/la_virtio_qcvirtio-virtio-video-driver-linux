@@ -59,8 +59,10 @@ static const struct vb2_ops virtio_video_enc_qops = {
 	.buf_queue = virtio_video_buf_queue,
 	.start_streaming = virtio_video_enc_start_streaming,
 	.stop_streaming = virtio_video_enc_stop_streaming,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0)
 	.wait_prepare = vb2_ops_wait_prepare,
 	.wait_finish = vb2_ops_wait_finish,
+#endif
 };
 
 static int virtio_video_enc_s_ctrl(struct v4l2_ctrl *ctrl)
@@ -193,7 +195,11 @@ static int virtio_video_enc_init_queues(void *priv, struct vb2_queue *src_vq,
 	src_vq->buf_struct_size = sizeof(struct virtio_video_buffer);
 	src_vq->ops = &virtio_video_enc_qops;
 	src_vq->mem_ops = virtio_video_mem_ops(vvd);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+	src_vq->min_queued_buffers = 0;
+#else
 	src_vq->min_buffers_needed = 0;
+#endif
 	src_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	src_vq->lock = &stream->vq_mutex;
 	src_vq->gfp_flags = virtio_video_gfp_flags(vvd);
@@ -209,7 +215,11 @@ static int virtio_video_enc_init_queues(void *priv, struct vb2_queue *src_vq,
 	dst_vq->buf_struct_size = sizeof(struct virtio_video_buffer);
 	dst_vq->ops = &virtio_video_enc_qops;
 	dst_vq->mem_ops = virtio_video_mem_ops(vvd);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+	dst_vq->min_queued_buffers = 0;
+#else
 	dst_vq->min_buffers_needed = 0;
+#endif
 	dst_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	dst_vq->lock = &stream->vq_mutex;
 	dst_vq->gfp_flags = virtio_video_gfp_flags(vvd);
