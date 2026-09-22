@@ -694,7 +694,11 @@ static int virtio_video_device_open(struct file *file)
 	v4l2_m2m_set_src_buffered(stream->fh.m2m_ctx, true);
 	v4l2_m2m_set_dst_buffered(stream->fh.m2m_ctx, true);
 	file->private_data = &stream->fh;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 18, 0)
+	v4l2_fh_add(&stream->fh, file);
+#else
 	v4l2_fh_add(&stream->fh);
+#endif
 
 	if (vvd->ops->init_ctrls) {
 		ret = vvd->ops->init_ctrls(stream);
@@ -706,7 +710,11 @@ static int virtio_video_device_open(struct file *file)
 	return 0;
 
 err_init_ctrls:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 18, 0)
+	v4l2_fh_del(&stream->fh, file);
+#else
 	v4l2_fh_del(&stream->fh);
+#endif
 	mutex_lock(video_dev->lock);
 	v4l2_m2m_ctx_release(stream->fh.m2m_ctx);
 	mutex_unlock(video_dev->lock);
@@ -737,7 +745,11 @@ static int virtio_video_device_release(struct file *file)
 
 	idr_remove(&vvd->stream_idr, stream->stream_id);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 18, 0)
+	v4l2_fh_del(&stream->fh, file);
+#else
 	v4l2_fh_del(&stream->fh);
+#endif
 	v4l2_m2m_ctx_release(stream->fh.m2m_ctx);
 	v4l2_fh_exit(&stream->fh);
 
