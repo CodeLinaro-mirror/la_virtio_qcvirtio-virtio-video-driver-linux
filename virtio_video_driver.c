@@ -95,7 +95,18 @@ static int virtio_video_probe(struct virtio_device *vdev)
 
 	INIT_WORK(&vvd->eventq.work, virtio_video_process_events);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+	{
+		struct virtqueue_info vqs_info[] = {
+			{ names[0], callbacks[0] },
+			{ names[1], callbacks[1] },
+		};
+
+		ret = virtio_find_vqs(vdev, 2, vqs, vqs_info, NULL);
+	}
+#else
 	ret = virtio_find_vqs(vdev, 2, vqs, callbacks, names, NULL);
+#endif
 	if (ret) {
 		v4l2_err(&vvd->v4l2_dev, "failed to find virt queues\n");
 		goto err_vqs;
